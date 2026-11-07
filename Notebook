@@ -1,12 +1,158 @@
-#script para traer la data
+#Limpieza de Datos Basado en la guía de 10 pasos y en el manual de limpieza
 
-import pandas as pd
-# Link directo al dataset Telco Churn en GitHub
-url = "https://raw.githubusercontent.com/IBM/telco-customer-churn-on-icp4d/master/data/Telco-Customer-Churn.csv"
-# Carga directa al dataframe
-df_raw = pd.read_csv(url)
-# Guardar el DataFrame como archivo CSV en tu computadora o Google
-df_raw.to_csv('Telco_Customer_Churn.csv', index=False)
-# Verificación inicial de la estructura (Clase 1)
-print(df_raw.shape)
-print(df_raw.head())
+# PASO 1: Importar librerías
+
+
+import pandas as pd # pandas me sirve para trabajar con tablas (DataFrames)
+
+import numpy as np # numpy lo importo porque la guía lo pide (ayuda con cálculos numéricos)
+
+
+# PASO 2: Explorar los datos
+
+# El archivo ya está guardado en el entorno de Colab gracias al primer script.
+# Cargo el archivo directamente en una variable llamada df (data frame)
+df = pd.read_csv('Telco_Customer_Churn.csv')
+
+# Veo las primeras 5 filas para tener una idea de cómo son los datos
+print(df.head())
+
+# shape me dice cuántas filas y columnas tiene (filas, columnas)
+print("Filas y columnas:", df.shape)
+
+# info() me muestra el tipo de dato de cada columna y cuántos datos no nulos tiene
+# (ojo con TotalCharges: debería ser número pero aparece como texto "object")
+print(df.info())
+
+# Cuento cuántos valores nulos hay en cada columna
+print(df.isnull().sum())
+# Me da 0 en todo, pero TotalCharges puede tener espacios vacíos escondidos.
+# Reviso cuántas celdas de esa columna están "vacías" (solo espacios)
+print("Celdas vacías en TotalCharges:", (df['TotalCharges'].str.strip() == '').sum())
+# Me dieron 11, o sea que sí hay datos faltantes que isnull() no detecta
+
+
+# PASO 3: Estandarizar textos
+
+# Recorro todas las columnas de texto y les saco los espacios que pueden haber quedado al principio o al final
+for col in df.select_dtypes(exclude='number').columns:
+    df[col] = df[col].str.strip()
+# (No uso .lower() porque los valores como "Yes"/"No" ya están escritos igual en todas las filas)
+
+
+
+# PASO 4: Eliminar duplicados
+
+# Cada cliente tiene un customerID único, así que uso ese campo como criterio
+# (igual que el manual hace con el email). keep='first' se queda con la primera aparición
+filas_antes = len(df)
+df = df.drop_duplicates(subset=['customerID'], keep='first')
+print("Duplicados eliminados:", filas_antes - len(df))   # dio 0, no había repetidos
+
+
+# PASO 5: Estandarizar valores numéricos
+
+# TotalCharges es un número pero está guardado como texto, por eso no puedo operar con él.
+# Lo convierto con to_numeric. errors='coerce' convierte a NaN lo que no se puede
+# pasar a número (las 11 celdas vacías), y así ya puedo tratarlas como nulos
+df['TotalCharges'] = pd.to_numeric(df['TotalCharges'], errors='coerce')
+
+
+
+# PASO 6: Manejar valores faltantes
+
+# Ahora sí aparecen los nulos reales de TotalCharges
+print("Nulos en TotalCharges:", df['TotalCharges'].isnull().sum())   # 11
+
+# Miro esas filas para entender por qué faltan
+print(df[df['TotalCharges'].isnull()][['customerID', 'tenure', 'MonthlyCharges']])
+# Todas tienen tenure = 0: son clientes nuevos que todavía no pagaron nada
+
+# La guía propone rellenar con la media o eliminar. Acá no tiene sentido usar la media,
+# porque lo que falta en realidad es "cero pesos pagados". Entonces relleno con 0
+df['TotalCharges'] = df['TotalCharges'].fillna(0)
+
+# Compruebo que no quedó ningún nulo en todo el dataset
+print("Nulos totales:", df.isnull().sum().sum())   # tiene que dar 0
+
+
+# PASO 7: Filtrar datos incorrectos
+
+# La guía filtra edades negativas; en mi dataset lo equivalente es revisar que
+# la antigüedad no sea negativa y que los cargos mensuales sean positivos
+df = df[df['tenure'] >= 0]
+df = df[df['MonthlyCharges'] > 0]
+print("Filas después de filtrar:", len(df))   # sigue en 7043, no había datos incorrectos
+
+
+
+# EXTRA (no está en la guía, pero lo necesito para armar las tablas en SQL)
+
+# Hay columnas que dicen "No internet service" o "No phone service".
+# Eso es lo mismo que "No", porque ya sé si tienen internet o teléfono en otras columnas.
+# Las unifico para no tener información repetida
+columnas_internet = ['OnlineSecurity', 'OnlineBackup', 'DeviceProtection',
+                     'TechSupport', 'StreamingTV', 'StreamingMovies']
+for col in columnas_internet:
+    df[col] = df[col].replace('No internet service', 'No')
+df['MultipleLines'] = df['MultipleLines'].replace('No phone service', 'No')
+
+# Cambio el texto del método de pago para que quede en español
+df['PaymentMethod'] = df['PaymentMethod'].str.replace('(automatic)', '(automatico)', regex=False)
+
+# Convierto las columnas de Yes/No en 1/0 (en SQL las voy a guardar como TINYINT)
+columnas_si_no = ['Partner', 'Dependents', 'PhoneService', 'MultipleLines',
+                  'PaperlessBilling', 'Churn'] + columnas_internet
+for col in columnas_si_no:
+    df[col] = df[col].map({'Yes': 1, 'No': 0})
+
+
+# -----------------------------------------------------
+# PASO 8: Renombrar columnas
+# -----------------------------------------------------
+# Les pongo nombres en español y sin mayúsculas para que sean más claros
+# (formato: {'nombre_viejo': 'nombre_nuevo'})
+df = df.rename(columns={
+    'customerID': 'id_cliente',
+    'gender': 'genero',
+    'SeniorCitizen': 'adulto_mayor',
+    'Partner': 'tiene_pareja',
+    'Dependents': 'tiene_dependientes',
+    'tenure': 'antiguedad_meses',
+    'PhoneService': 'servicio_telefonico',
+    'MultipleLines': 'lineas_multiples',
+    'InternetService': 'tipo_internet',
+    'OnlineSecurity': 'seguridad_online',
+    'OnlineBackup': 'respaldo_online',
+    'DeviceProtection': 'proteccion_dispositivo',
+    'TechSupport': 'soporte_tecnico',
+    'StreamingTV': 'streaming_tv',
+    'StreamingMovies': 'streaming_peliculas',
+    'Contract': 'tipo_contrato',
+    'PaperlessBilling': 'factura_electronica',
+    'PaymentMethod': 'metodo_pago',
+    'MonthlyCharges': 'cargo_mensual',
+    'TotalCharges': 'cargo_total',
+    'Churn': 'churn'
+})
+
+# Reviso cómo quedó el dataset final
+print(df.info())
+print(df.head())
+
+
+# PASO 9: Guardar los datos limpios
+
+# index=False para que no agregue una columna extra con el número de fila
+df.to_csv('telco_limpio.csv', index=False)
+
+# También lo guardo en Excel por si lo piden así
+# (para importarlo en MySQL Workbench uso el CSV, no el Excel)
+df.to_excel('telco_limpio.xlsx', index=False)
+
+# Descargo los archivos a mi computadora
+from google.colab import files
+files.download('telco_limpio.csv')
+files.download('telco_limpio.xlsx')
+
+print("Datos limpios guardados.")
