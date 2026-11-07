@@ -1,1 +1,12 @@
+#script para traer la data
 
+import pandas as pd
+# Link directo al dataset Telco Churn en GitHub
+url = "https://raw.githubusercontent.com/IBM/telco-customer-churn-on-icp4d/master/data/Telco-Customer-Churn.csv"
+# Carga directa al dataframe
+df_raw = pd.read_csv(url)
+# Guardar el DataFrame como archivo CSV en tu computadora o Google
+df_raw.to_csv('Telco_Customer_Churn.csv', index=False)
+# Verificación inicial de la estructura (Clase 1)
+print(df_raw.shape)
+print(df_raw.head())
