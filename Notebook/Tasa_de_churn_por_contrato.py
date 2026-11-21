@@ -1,3 +1,5 @@
+##Tasa de Churn Por Contrato
+
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -33,3 +35,6 @@ for p in ax.patches:
 plt.tight_layout()
 plt.savefig('churn_por_contrato.png', dpi=300) #guardar
 plt.show()
+
+
+
