@@ -56,19 +56,19 @@ Los clientes con contrato mensual abandonan unas 15 veces más que los de contra
 
 ### Gráfico 1: Tasa de churn por tipo de contrato
 
-![Churn por tipo de contrato](images/churn_por_contrato.png)
+![Churn por tipo de contrato](Notebook/churn_por_contrato.png)
 
 Los clientes con contrato **mes a mes (Month-to-month)** se dan de baja en un 42,7 % de los casos, contra 11,3 % en los contratos de un año y 2,8 % en los de dos años. Al no tener un compromiso de permanencia, el cliente puede irse apenas encuentra una mejor oferta. Por eso conviene impulsar campañas para que pasen a planes de largo plazo.
 
 ### Gráfico 2: Distribución de antigüedad (KDE)
 
-![Densidad de antigüedad](images/densidad_antiguedad.png)
+![Densidad de antigüedad](Notebook/densidad_antiguedad.png)
 
 La curva roja (clientes que se fueron) se concentra en los primeros meses, mientras que la verde (clientes activos) crece hacia los 60–72 meses. El 55,5 % de las bajas ocurre en los **primeros 12 meses**, que es la ventana crítica. Ahí conviene reforzar el seguimiento y la fidelización del cliente nuevo.
 
 ### Gráfico 3: Matriz de impacto financiero
 
-![Matriz de decisión financiera](images/matriz_decision_financiera.png)
+![Matriz de decisión financiera](Notebook/matriz_decision_financiera.png)
 
 La matriz asigna un valor en dólares a cada decisión: retener con éxito a un cliente que se iba suma $280 (verdadero positivo), una promoción innecesaria cuesta $50 (falso positivo), operar normal con un cliente estable cuesta $0 (verdadero negativo) y no detectar a un cliente que se va resta $600 (falso negativo). Un **falso negativo cuesta 12 veces más que un falso positivo**: si no detectáramos a ninguno de los 1.869 clientes que se fueron, la pérdida sería de unos $1.121.400. Por eso conviene aceptar algunas promociones de más antes que dejar escapar clientes en riesgo.
 
